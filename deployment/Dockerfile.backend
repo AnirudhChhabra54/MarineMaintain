@@ -1,0 +1,42 @@
+# Use an official Python runtime as a parent image
+FROM python:3.9-slim
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    tesseract-ocr \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the backend code
+COPY backend/ backend/
+COPY data_pipeline/ data_pipeline/
+COPY ml_models/ ml_models/
+COPY tests/ tests/
+
+# Create necessary directories
+RUN mkdir -p data/incoming/csv \
+    data/incoming/pdf \
+    data/incoming/images \
+    models
+
+# Set Python path
+ENV PYTHONPATH=/app
+
+# Expose port
+EXPOSE 8000
+
+# Start the FastAPI server
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
